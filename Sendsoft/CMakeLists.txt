@@ -36,7 +36,11 @@ add_executable(${CMAKE_PROJECT_NAME}
         Interface/Int_can.c
         Interface/Int_can.h
         Application/App_update.c
-        Application/App_update.h)
+        Application/App_update.h
+        Application/app_bootloader.h
+        Interface/int_bootloader.c
+        Interface/int_bootloader.h
+        Application/app_bootloader.c)
 
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)

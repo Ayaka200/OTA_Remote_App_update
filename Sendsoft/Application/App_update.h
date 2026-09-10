@@ -12,5 +12,14 @@ typedef enum {
     APP_UPDATE_SEND_APP,
 }APP_UPDATE_STATUS;
 
+extern CAN_TxHeaderTypeDef TxHeader;   /* 声明，定义在 .c 文件中 */
+
+void App_Update_Init(void);
+
+void App_Update_WaitCmd(void);
+
+void App_Update_SendApp(void);
+
+void App_Update_work(void);
 
 #endif //SENDSOFT_APP_UPDATE_H
