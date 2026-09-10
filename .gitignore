@@ -1,0 +1,118 @@
+# ============================================================
+#  STM32 / CMake / CLion / Keil MDK 项目 .gitignore
+# ============================================================
+
+# ---------- CMake 构建产物 ----------
+build/
+cmake-build-*/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+CMakePresets.json.user
+CTestTestfile.cmake
+_deps/
+# 注意：项目中的 cmake/*.cmake（工具链文件）需保留跟踪，故不使用 *.cmake 全局排除
+
+# ---------- 编译中间文件 & 固件输出 ----------
+*.o
+*.obj
+*.elf
+*.axf
+*.hex
+*.bin
+*.srec
+*.s19
+*.map
+*.lst
+*.d
+*.dep
+*.crf
+*.dmp
+*.i
+*.ii
+
+# ---------- Keil MDK (ARMCC / ARMCLANG) ----------
+*.uvguix.*
+*.uvoptx
+*.uvgui.*
+*.uvopt
+*.uvproj.bak
+*.uvprojx.bak
+RTE/
+Objects/
+Listings/
+DebugConfig/
+*.scvd
+*.ini
+!flash.ini
+JLinkLog.txt
+*.jlink
+*.SFR
+*.tra
+*.iex
+
+# ---------- STM32CubeMX ----------
+.mxproject.bak
+*.ioc.bak
+*_Template.uvprojx
+*_Template.uvproj
+
+# ---------- STM32 第三方库 & CubeMX 生成代码 ----------
+Drivers/
+Core/
+*.png
+*.jpg
+*.jpeg
+*.bmp
+
+# ---------- JetBrains CLion / IDEA ----------
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# ---------- VS Code ----------
+.vscode/
+*.code-workspace
+
+# ---------- 系统 & 编辑器临时文件 ----------
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.lnk
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# ---------- 通用临时/备份文件 ----------
+*.tmp
+*.temp
+*.bak
+*.backup
+*.swp
+*.swo
+*~
+*.orig
+*.log
+*.old
+
+# ---------- 压缩包 & 大文件 ----------
+*.zip
+*.rar
+*.7z
+*.tar
+*.gz
+
+# ---------- 文档输出（按需保留可注释掉） ----------
+*.pdf
+*.docx
+*.xlsx
