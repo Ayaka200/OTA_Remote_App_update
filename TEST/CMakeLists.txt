@@ -34,7 +34,14 @@ enable_language(C ASM)
 # Create an executable object type
 add_executable(${CMAKE_PROJECT_NAME}
         Interface/Int_can.c
-        Interface/Int_can.h)
+        Interface/Int_can.h
+        Application/app_update.c
+        Application/app_update.h
+        Interface/int_w25q64.c
+        Interface/int_w25q64_ins.h
+        Interface/int_w25q64.h
+        Interface/int_at24c02.c
+        Interface/int_at24c02.h)
 
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)
@@ -53,6 +60,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
         ${CMAKE_CURRENT_SOURCE_DIR}/Interface
+        ${CMAKE_CURRENT_SOURCE_DIR}/Application
 )
 
 # Add project symbols (macros)

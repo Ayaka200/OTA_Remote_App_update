@@ -27,12 +27,14 @@
 #define APP_HEALTH_KEY               0xBBU    /*A区程序健康标志位有效*/
 
 //备份待同步状态
-#define IMG_SYNC_ADDR                0x20U     /*镜像区程序待同步标志位存储地址*/
+#define IMG_SYNC_ADDR                0x28U     /*镜像区程序待同步标志位存储地址*/
 #define IMG_SYNC_NEED                0x0CU     /*镜像区程序需要同步*/
 #define IMG_SYNC_DONE                0xC0U     /*镜像区陈鼓型不需要同步*/
 //校验密钥
-#define IMG_SYNC_KEY_ADDR            0x28U      /*镜像区同步标志位校验位地址*/
+#define IMG_SYNC_KEY_ADDR            0x20U      /*镜像区同步标志位校验位地址*/
 #define IMG_SYNC_KEY                 0xCCU      /*镜像区同步标志位校验位*/
+
+
 
 
 void App_Bootloader_Check_Update(void);

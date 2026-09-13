@@ -18,6 +18,12 @@ void App_Update_Init(void);
 
 void App_Update_WaitCmd(void);
 
+void App_Send_Start(void);
+
+void App_Send_CRC(uint32_t CRC32,uint32_t id);
+
+void App_Send_End(void);
+
 void App_Update_SendApp(void);
 
 void App_Update_work(void);
