@@ -59,6 +59,17 @@ static void App_Send_Data(uint8_t * Data,uint8_t len) {
     Int_CAN_Send(&TxHeader, Data);
 }
 
+static uint8_t App_Recv_ACK(void) {
+    CAN_Msg_t ack_msg;
+    if (Int_CAN_Pop(&ack_msg) == 0) return 0;   /* 队列为空 */
+    if (ack_msg.header.StdId == 0x001 && ack_msg.header.DLC == 1) {
+        if (ack_msg.data[0] == 0x66) {
+            return 1;
+        }
+    }
+    return 0;   /* 不是ACK */
+}
+
 void App_Send_CRC(uint32_t CRC32,uint32_t id) {
     TxHeader.StdId = id;
     TxHeader.DLC = 4;
@@ -164,6 +175,15 @@ void App_Update_SendApp(void) {
         if ( update_data_len % 4096 == 0 || update_data_len >= uart_recv_full_len) {
             sector_crc = ~sector_crc;          /* 标准CRC32最后取反 */
             App_Send_CRC(sector_crc, 0x103);   /* 0x103 = 扇区CRC */
+            /* 等待TEST应答，超时2秒 */
+            uint32_t ack_tick = HAL_GetTick();
+            while (!App_Recv_ACK()) {
+                if (HAL_GetTick() - ack_tick > 20000) {
+                    printf("ACK timeout, sector=%d\r\n", Sector_Num - 1);
+                    app_update_status = APP_UPDATE_WAIT;
+                    return;
+                }
+            }
         }
 
     }

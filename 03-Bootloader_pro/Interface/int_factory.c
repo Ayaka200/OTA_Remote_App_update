@@ -48,7 +48,7 @@ uint8_t Int_Factory_Image_Append(uint8_t *data_buf,uint32_t len) {
 
     if (len + img_offset > FACTORY_IMG_MAX_LEN) return 0;
 
-    uint32_t addr = FACTORY_IMG_BASE_ADDR + FACTORY_IMG_HEAD_LEN + img_offset;
+    uint32_t addr = FACTORY_IMG_BASE_ADDR + IMG_HEAD_LEN + img_offset;
     uint8_t *p = data_buf;                    /* 保存起点，CRC 还要用 */
     uint32_t left = len;
 
@@ -72,7 +72,7 @@ uint8_t Int_Factory_Image_Append(uint8_t *data_buf,uint32_t len) {
  * @return 0:编译失败   1:编译成功
  */
 uint8_t Int_Factory_Commit(uint32_t total_len) {
-    Factory_Image_Header hdr;
+    Image_Header hdr;
     // 1.判断程序大小是否合法
     if (total_len > FACTORY_IMG_MAX_LEN) return 0;
     if (total_len != img_offset) return 0;
@@ -92,7 +92,7 @@ uint8_t Int_Factory_Commit(uint32_t total_len) {
  * @return 0:程序异常 1:程序正常
  */
 uint8_t Int_Factory_Check_Image(void) {
-    Factory_Image_Header hdr;       //存储读取的头部
+    Image_Header hdr;       //存储读取的头部
     uint32_t crc = 0xFFFFFFFFUL;    //CRC初始值
     uint8_t read_buf[256]={0};      //接收读取的数据
 
@@ -104,7 +104,7 @@ uint8_t Int_Factory_Check_Image(void) {
     // 2.重新计算CRC
     for (uint32_t offset = 0; offset < hdr.length; offset+=256) {
         uint32_t chunk = (hdr.length - offset)>256 ? 256 : (hdr.length - offset);
-        Int_W25Q64_ReadData(FACTORY_IMG_BASE_ADDR + FACTORY_IMG_HEAD_LEN + offset,read_buf,chunk);
+        Int_W25Q64_ReadData(FACTORY_IMG_BASE_ADDR + IMG_HEAD_LEN + offset,read_buf,chunk);
         for (uint32_t i=0;i<chunk;i++) {
             crc = Factory_CRC_Calculate(read_buf[i],crc);
         }
@@ -119,7 +119,7 @@ uint8_t Int_Factory_Check_Image(void) {
  */
 uint8_t Int_Factory_Restore(void) {
 
-    Factory_Image_Header hdr;
+    Image_Header hdr;
     uint8_t read_buf[256]={0};
 
     if (!Int_Factory_Check_Image()) return 0;
@@ -128,13 +128,13 @@ uint8_t Int_Factory_Restore(void) {
     Int_W25Q64_ReadData(FACTORY_IMG_BASE_ADDR,(uint8_t *)&hdr,sizeof(hdr));
 
     // 2.擦除APP区的内容
-    Int_Bootloader_Erase_Flash(APP_START_ADDR,48);
+    Int_Bootloader_Erase_Flash(APP_START_ADDR,44);
 
     // 3.从W24Q64读取备份写入 --> APP区
     HAL_FLASH_Unlock();
     for (uint32_t offset = 0; offset < hdr.length; offset+=256) {
         uint32_t chunk = (hdr.length - offset)>256 ? 256 : (hdr.length - offset);
-        Int_W25Q64_ReadData(FACTORY_IMG_BASE_ADDR + FACTORY_IMG_HEAD_LEN + offset,read_buf,chunk);
+        Int_W25Q64_ReadData(FACTORY_IMG_BASE_ADDR + IMG_HEAD_LEN + offset,read_buf,chunk);
         for (uint32_t i=0;i<chunk;i+=2) {
             uint16_t halfword = 0xFFFFUL;
             uint16_t n = (chunk-i >= 2) ? 2 : (chunk-i);
@@ -180,7 +180,7 @@ uint8_t Int_Factory_Backup_From_App(uint32_t len) {
 //     /* 读回逐字节比对 */
 //     for (uint32_t off = 0; off < len; off += 256) {
 //         uint32_t n = (len - off > 256) ? 256 : (len - off);
-//         Int_W25Q64_ReadData(FACTORY_IMG_BASE_ADDR + FACTORY_IMG_HEAD_LEN + off, rbuf, n);
+//         Int_W25Q64_ReadData(FACTORY_IMG_BASE_ADDR + IMG_HEAD_LEN + off, rbuf, n);
 //         for (uint32_t i = 0; i < n; i++)
 //             if (rbuf[i] != (uint8_t)(off + i)) { ok = 0; break; }
 //     }
@@ -190,7 +190,7 @@ uint8_t Int_Factory_Backup_From_App(uint32_t len) {
 //
 //     /* 反证：0x00010F 原值 0xEF，写成 0xEE（清 bit0）——真正篡改 */
 //     uint8_t z = 0xEE;
-//     Int_W25Q64_PageProgram(FACTORY_IMG_BASE_ADDR + FACTORY_IMG_HEAD_LEN + 255, &z, 1);
+//     Int_W25Q64_PageProgram(FACTORY_IMG_BASE_ADDR + IMG_HEAD_LEN + 255, &z, 1);
 //     printf("After tamper: %d (expect 0)\r\n", Int_Factory_Check_Image());
 // }
 //

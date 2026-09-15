@@ -8,16 +8,13 @@
 #include "main.h"
 #define  BOOTLOADER_UART_RECV_BUFF_LEN 512  //接收缓存区大小
 
-//FLASH起始地址为0x8000000，假设B区大小为16K，则A区起始地址为0x8000000+0x004000
-#define APP_START_ADDR 0x8004000
+//FLASH起始地址为0x8000000，假设B区大小为20K，则A区起始地址为0x8000000+0x005000
+#define APP_START_ADDR 0x8005000
 #define APP_END_ADDR   0x8010000UL
 #define RAM_BASE        0x20000000UL
 #define RAM_END         0x20005000UL   /* 20KB RAM 顶端 */
 
-/**
- * @brief 初始化,串口接收 => 接收A程序（DMA 版）
- */
-void Int_Bootloader_DMA_Init(void);
+
 
 /**
  * @brief 初始化,串口接收 => 接收A程序（IT 版，已被 DMA 版替代，保留备用）

@@ -58,9 +58,12 @@ JLinkLog.txt
 *_Template.uvprojx
 *_Template.uvproj
 
-# ---------- STM32 第三方库 & CubeMX 生成代码 ----------
+# ---------- STM32 第三方库（体量大，可由 CubeMX 从 .ioc 重新生成，不跟踪） ----------
 Drivers/
-Core/
+# 注意：Core/ 里含手写代码（各工程 main.c 的启动/跳转流程、外设初始化、中断服务），
+#       体积很小（每个工程几十 KB），必须跟踪 —— 不要在这里加 Core/
+
+# ---------- 图片资源 ----------
 *.png
 *.jpg
 *.jpeg

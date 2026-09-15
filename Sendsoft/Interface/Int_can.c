@@ -18,10 +18,10 @@ void Int_CAN_Init(void) {
     FilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
     FilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
     // 3.配置32位屏蔽段和掩码段（全0 = 不过滤，接收所有ID）
-    //接收A程序的 ID 0x0000
+    //接收A程序的 ID 0x000~0x0FF
     FilterConfig.FilterIdHigh = 0x0000;
     FilterConfig.FilterIdLow = 0x0000;
-    FilterConfig.FilterMaskIdHigh = 0xFFE0;
+    FilterConfig.FilterMaskIdHigh = 0xE000;
     FilterConfig.FilterMaskIdLow = 0x0000;
 
     FilterConfig.FilterActivation = ENABLE;

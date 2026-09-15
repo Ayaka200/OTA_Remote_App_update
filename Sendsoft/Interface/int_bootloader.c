@@ -10,7 +10,7 @@
 #include "usart.h"
 
 /* 环形缓冲区大小：必须是 2 的幂，且要大于 BOOTLOADER_UART_RECV_BUFF_LEN + 1 */
-#define UART_RING_SIZE  1024
+#define UART_RING_SIZE  2048
 
 static uint8_t  uart_ring[UART_RING_SIZE];
 static volatile uint16_t ring_head  = 0;   // 写入位置
@@ -56,10 +56,11 @@ static void Int_FLASH_Erase(uint16_t byte_count) {
  * @brief 写入环形缓存区
  * @param byte
  */
+static volatile uint8_t ring_overflow = 0;   /* 缓冲区溢出标志 */
+
 static void ring_write(uint8_t byte) {
     if (ring_count >= UART_RING_SIZE) {
-        /* 根据你的协议决定溢出处理，例如置错误标志 */
-        Error_Handler();
+        ring_overflow = 1;   /* 置溢出标志，丢弃新数据，不死循环 */
         return;
     }
     uart_ring[ring_head]=byte;
@@ -90,6 +91,42 @@ static void Int_FLASH_Write(void) {
 
         flash_write_offset += 2;
     }
+}
+
+/**
+ * @brief 收尾：把环形缓冲区里剩下的、凑不满一个半字的字节也写进 Flash
+ *
+ * STM32F1 只能按 16 位编程，所以最后 1 个字节要配上 0xFF 一起写。
+ * 镜像是奇数字节时（.bin 长度很常见），以前这个字节会一直留在环形缓冲区里，
+ * Flash 里对应位置还是 0xFF，发出去的固件最后一个字节就是错的。
+ */
+void Int_FLASH_FlushTail(void) {
+    if (ring_count == 0U) {
+        return;   /* 偶数长度：没有尾巴，直接返回 */
+    }
+
+    HAL_FLASH_Unlock();
+    Int_FLASH_Write();     /* 先按半字把成对的写完 */
+
+    if (ring_count != 0U) {
+        uint8_t last = ring_read();
+        uint32_t addr = APP_START_ADDR + flash_write_offset;
+        uint16_t halfword;
+
+        if ((flash_write_offset & 1U) == 0U) {
+            /* 落在半字的低字节：高字节保持擦除态的 0xFF */
+            halfword = (uint16_t)(0xFF00U | (uint16_t)last);
+        } else {
+            /* 落在半字的高字节：低字节是刚写进去的那个字节，读回来一起重写 */
+            uint8_t prev = *(volatile uint8_t *)(addr - 1U);
+            halfword = (uint16_t)((uint16_t)prev | ((uint16_t)last << 8));
+            addr -= 1U;
+        }
+
+        HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD, addr, halfword);
+        flash_write_offset++;
+    }
+    HAL_FLASH_Lock();
 }
 
 
@@ -144,72 +181,25 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 }
 
 void Int_Bootloader_Recv_App(void) {
-    /*1.初始化串口之前清空之前的问题*/
+    /*0. 把写入偏移和环形缓冲区清干净
+         否则同一轮里第二次接收会接着上次的偏移往后面写，镜像整体错位*/
+    flash_write_offset = 0;
+    ring_head = 0;
+    ring_tail = 0;
+    ring_count = 0;
+    ring_overflow = 0;
+    memset(uart_recv_buff, 0, BOOTLOADER_UART_RECV_BUFF_LEN);
+
+    /*1. 先中止可能残留的阻塞接收，重置 UART 状态*/
+    HAL_UART_AbortReceive(&huart1);
+    /*2. 清空标志位*/
     __HAL_UART_CLEAR_OREFLAG(&huart1);
     __HAL_UART_CLEAR_IDLEFLAG(&huart1);
-     HAL_UARTEx_ReceiveToIdle_IT(&huart1, uart_recv_buff, BOOTLOADER_UART_RECV_BUFF_LEN);
+    /*3. 启动中断接收*/
+    HAL_UARTEx_ReceiveToIdle_IT(&huart1, uart_recv_buff, BOOTLOADER_UART_RECV_BUFF_LEN);
 }
 /* ================= 原 IT 版本结束 ================= */
 
-/**
- *@brief 跳转程序至APP
- */
-uint8_t Int_Bootloader_Jump_to_app(void) {
-
-    typedef void (*pFunc)(void);
-    //1 校验
-    /*1.1获取栈顶地址的值和复位中断*/
-    uint32_t app_estack = *(volatile uint32_t *) (APP_START_ADDR);
-    uint32_t app_reset_handle = *(volatile uint32_t *) (APP_START_ADDR+4);
-    printf("estack=%08X reset=%08X\r\n", app_estack, app_reset_handle);
-    /*1.2校验栈顶地址的值*/
-    /* 校验栈顶：RAM 范围 + 8 字节对齐 + 非擦除态 */
-    if ((app_estack <= RAM_END) && (app_estack >= RAM_BASE)
-        && ((app_estack & 0x07) == 0) && (app_estack != 0xFFFFFFFF)) {
-
-        /*1.3校验复位中断*/
-        if ((app_reset_handle >= APP_START_ADDR) && (app_reset_handle < APP_END_ADDR)
-            && (app_reset_handle & 0x01u)) {
-
-            //2 注销Bootloader程序
-
-            NVIC_DisableIRQ(EXTI9_5_IRQn);
-            NVIC_DisableIRQ(USART1_IRQn);
-
-            /*2.1关闭中断*/
-            __disable_irq();
-
-            /* 关闭并清空所有 NVIC 中断，防止遗留中断在 App 开中断瞬间触发 */
-            for (uint32_t i = 0; i < 8; i++) {
-                NVIC->ICER[i] = 0xFFFFFFFF;   /* 全部禁用 */
-                NVIC->ICPR[i] = 0xFFFFFFFF;   /* 清全部挂起 */
-            }
-
-            /*2.2关闭Bootloader的滴答计时器*/
-            SysTick->CTRL = 0;
-            //关闭HAL库
-            HAL_DeInit();
-            // 时钟复位
-            RCC->CR |= RCC_CR_HSION;
-            while (!(RCC->CR & RCC_CR_HSIRDY));
-            RCC->CFGR &= ~RCC_CFGR_SW;
-            while ((RCC->CFGR & RCC_CFGR_SWS) != RCC_CFGR_SWS_HSI);
-            RCC->CR &= ~(RCC_CR_PLLON | RCC_CR_HSEON);
-            /*2.3设置主栈堆指针*/
-            SCB->VTOR = APP_START_ADDR;
-
-            /*2.4重定向向量中断表*/
-            __set_MSP(app_estack);
-
-            /*2.5跳转至APP的复位中断*/
-            pFunc jump_to_app = (pFunc) app_reset_handle;
-            jump_to_app();
-        }
-    }
-    else {
-        return 1;
-    }
-}
 /**
  * @brief 提前擦除FLASH指定地址的页数
  * @param Page_Addr 要擦出的地址

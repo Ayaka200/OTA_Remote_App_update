@@ -35,7 +35,7 @@
 #define IMG_SYNC_KEY                 0xCCU      /*镜像区同步标志位校验位*/
 
 
-
+void App_Bootloader_AT24C02_Init(void);
 
 void App_Bootloader_Check_Update(void);
 
